@@ -1,14 +1,14 @@
+import hashlib
+import os
+from pymongo import MongoClient
+from askcos.utilities.io.logger import MyLogger
+import rdkit.Chem as Chem
 import gzip
 import json
 import askcos.global_config as gc
 from rdkit import RDLogger
 lg = RDLogger.logger()
 lg.setLevel(4)
-import rdkit.Chem as Chem
-from askcos.utilities.io.logger import MyLogger
-from pymongo import MongoClient
-import os
-import hashlib
 historian_loc = 'chemhistorian'
 
 
@@ -34,8 +34,7 @@ class ChemHistorian:
 
     def load_databases(self):
         """Loads the history data from the mongo database."""
-        db_client = MongoClient(gc.MONGO['path'], gc.MONGO[
-                                'id'], connect=gc.MONGO['connect'])
+        db_client = MongoClient(gc.MONGO['path'], gc.MONGO['id'], connect=gc.MONGO['connect'])
         db = db_client[gc.CHEMICALS['database']]
         self.CHEMICALS_DB = db[gc.CHEMICALS['collection']]
 
@@ -75,7 +74,8 @@ class ChemHistorian:
         if not os.path.isfile(file_path):
             raise ValueError('File does not exist!')
 
-        MyLogger.print_and_log('Loading chemhistorian from file...', historian_loc)
+        MyLogger.print_and_log(
+            'Loading chemhistorian from file...', historian_loc)
 
         with gzip.open(file_path, 'rb') as f:
             chemicals = json.loads(f.read().decode('utf-8'))
@@ -102,7 +102,7 @@ class ChemHistorian:
 
         MyLogger.print_and_log('Historian is fully loaded.', historian_loc)
 
-    def lookup_smiles(self, smiles, alreadyCanonical=False, isomericSmiles=True, template_set='reaxys'):
+    def lookup_smiles(self, smiles, alreadyCanonical=False, isomericSmiles=True, template_sets=['reaxys']):
         """Looks up number of occurances by SMILES.
 
         Tries it as-entered and then re-canonicalizes it in RDKit unless the
@@ -129,7 +129,6 @@ class ChemHistorian:
             'as_reactant': 0,
             'as_product': 0
         }
-
         if not isomericSmiles:
             raise ValueError('Not intended to be used for non-isomeric!')
 
@@ -138,21 +137,23 @@ class ChemHistorian:
             if not mol:
                 return default_result
             smiles = Chem.MolToSmiles(mol, isomericSmiles=isomericSmiles)
-
-        hashed_smiles = str(int(hashlib.md5(smiles.encode('utf-8')).hexdigest(), 16))
-
+        hashed_smiles = str(
+            int(hashlib.md5(smiles.encode('utf-8')).hexdigest(), 16))
         if self.use_db:
-            doc = self.CHEMICALS_DB.find_one(
-                {
+            docs = [self.CHEMICALS_DB.find_one(
+                    {
                     'smiles': {'$in': [smiles, hashed_smiles]},
-                    'template_set': template_set
-                }, 
-                {'as_reactant': 1, 'as_product': 1}
-            )
-            if doc:
-                return doc
-            else:
-                return default_result
+                    'template_set' : t_s
+                    },
+                    {'as_reactant': 1, 'as_product': 1}) for t_s in template_sets]
+
+            #aggregate results from different historian DBs
+            result = default_result
+            for doc in docs:
+                if doc:
+                    result['as_reactant'] += doc['as_reactant']
+                    result['as_product'] += doc['as_product']
+            return result
         else:
             result = self.occurrences.get(smiles, None)
             if result is not None:
@@ -166,7 +167,8 @@ class ChemHistorian:
         """Converts keys to hashed values to save space."""
         new_occurrences = {}
         for k in self.occurrences.keys():
-            k_compressed = str(int(hashlib.md5(k.encode('utf-8')).hexdigest(), 16))
+            k_compressed = str(
+                int(hashlib.md5(k.encode('utf-8')).hexdigest(), 16))
             new_occurrences[k_compressed] = self.occurrences[k]
         del self.occurrences
         self.occurrences = new_occurrences

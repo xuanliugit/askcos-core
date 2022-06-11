@@ -46,6 +46,7 @@ class RetroResult:
             return
 
         self.precursors[index].template_ids |= set(precursor.template_ids)
+        self.precursors[index].template_set = precursor.template_set[0] * len (self.precursors[index].template_ids)
         self.precursors[index].num_examples += precursor.num_examples
         if self.precursors[index].template_score < precursor.template_score:
             self.precursors[index].template_score = precursor.template_score
@@ -75,7 +76,8 @@ class RetroResult:
                 'smiles_split': precursor.smiles_list,
                 'score': float(precursor.retroscore),
                 'num_examples': precursor.num_examples,
-                'tforms': sorted(list(precursor.template_ids)),
+                'tforms': list(precursor.template_ids),
+                'tsources': list(precursor.template_set),
                 'template_score': float(precursor.template_score),
                 'necessary_reagent': precursor.necessary_reagent,
                 'plausibility': precursor.plausibility,
@@ -124,7 +126,7 @@ class RetroPrecursor:
         plausibility (float): Plausibility assigned to successful reaction.
     """
 
-    def __init__(self, smiles_list=[], mapped_smiles =[], reacting_atoms=[], template_id=-1, template_score=1, num_examples=0, necessary_reagent='', plausibility=1.0):
+    def __init__(self, smiles_list=[], mapped_smiles =[], reacting_atoms=[], template_id=-1, template_score=1, num_examples=0, necessary_reagent='', plausibility=1.0, template_set='NA'):
         """Initializes RetroPrecursor.
 
         Args:
@@ -152,6 +154,7 @@ class RetroPrecursor:
         self.mapped_smiles = mapped_smiles
         self.reacting_atoms = reacting_atoms
         self.template_ids = set([template_id])
+        self.template_set = set([template_set])
         self.template_score = template_score
         self.necessary_reagent = necessary_reagent
         self.plausibility = plausibility

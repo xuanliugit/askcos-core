@@ -19,9 +19,10 @@ class RelevanceTemplatePrioritizer(Prioritizer):
         fp_radius (int): Fingerprint radius.
     """
 
-    def __init__(self, fp_length=2048, fp_radius=2):
+    def __init__(self, fp_length=2048, fp_radius=2, template_set=None):
         self.fp_length = fp_length
         self.fp_radius = fp_radius
+        self.template_set = template_set
 
     def load_model(self, model_path=gc.RELEVANCE_TEMPLATE_PRIORITIZATION['reaxys']['model_path'], **kwargs):
         """Loads a model to predict template priority.

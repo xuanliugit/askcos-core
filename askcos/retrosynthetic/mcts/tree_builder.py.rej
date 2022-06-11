@@ -1,0 +1,31 @@
+diff a/askcos/retrosynthetic/mcts/tree_builder.py b/askcos/retrosynthetic/mcts/tree_builder.py	(rejected hunks)
+@@ -14,12 +15,16 @@ import askcos.global_config as gc
+ from askcos.retrosynthetic.mcts.nodes import Chemical, Reaction, ChemicalTemplateApplication
+ from askcos.retrosynthetic.transformer import RetroTransformer
+ from askcos.utilities.buyable.pricer import Pricer
++from askcos.utilities.descriptors import rms_molecular_weight, number_of_rings
+ from askcos.utilities.formats import chem_dict, rxn_dict
+ from askcos.utilities.io.logger import MyLogger
+ from askcos.utilities.historian.chemicals import ChemHistorian
++from askcos.prioritization.precursors.scscore import SCScorePrecursorPrioritizer
+ from askcos.prioritization.templates.relevance import RelevanceTemplatePrioritizer
+ from askcos.synthetic.evaluation.fast_filter import FastFilterScorer
+ 
++from .utils import chem_to_nx_graph, nx_graph_to_paths, nx_paths_to_json
++
+ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+ 
+ treebuilder_loc = 'mcts_tree_builder'
+@@ -1074,9 +942,10 @@ class MCTS:
+                           filter_threshold=0.75,
+                           soft_reset=False,
+                           return_first=False,
++                          return_graph=False,
+                           sort_trees_by='plausibility',
+-                          template_prioritizer='reaxys',
+-                          template_set='reaxys',
++                          template_prioritizers=['reaxys'],
++                          template_sets=['reaxys'],
+                           **kwargs):
+         """Returns trees with path ending in buyable chemicals.
+ 

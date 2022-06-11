@@ -81,14 +81,16 @@ class RetroTransformer(TemplateTransformer):
         self.cluster = cluster
         self.cluster_settings = cluster_settings or {}
 
-        super(RetroTransformer, self).__init__(load_all=load_all, use_db=use_db)
+        super(RetroTransformer, self).__init__(
+            load_all=load_all, use_db=use_db)
 
     def load(self, template_filename=None):
         if template_filename is None:
             template_filename = gc.RETRO_TEMPLATES['file_name']
 
         if self.template_prioritizer in gc.RELEVANCE_TEMPLATE_PRIORITIZATION:
-            MyLogger.print_and_log('Loading template prioritizer for RetroTransformer', retro_transformer_loc)
+            MyLogger.print_and_log(
+                'Loading template prioritizer for RetroTransformer', retro_transformer_loc)
             template_prioritizer = RelevanceTemplatePrioritizer()
             template_prioritizer.load_model(
                 gc.RELEVANCE_TEMPLATE_PRIORITIZATION[self.template_prioritizer]['model_path']
@@ -96,31 +98,39 @@ class RetroTransformer(TemplateTransformer):
             self.template_prioritizer = template_prioritizer
 
         if self.precursor_prioritizer == 'relevanceheuristic':
-            MyLogger.print_and_log('Loading precursor prioritizer for RetroTransformer', retro_transformer_loc)
+            MyLogger.print_and_log(
+                'Loading precursor prioritizer for RetroTransformer', retro_transformer_loc)
             self.precursor_prioritizer_object = RelevanceHeuristicPrecursorPrioritizer()
             self.precursor_prioritizer_object.load_model()
             self.precursor_prioritizer = self.precursor_prioritizer_object.reorder_precursors
 
         if self.fast_filter == 'default':
-            MyLogger.print_and_log('Loading fast filter for RetroTransformer', retro_transformer_loc)
+            MyLogger.print_and_log(
+                'Loading fast filter for RetroTransformer', retro_transformer_loc)
             self.fast_filter_object = FastFilterScorer()
             self.fast_filter_object.load()
-            self.fast_filter = lambda x, y: self.fast_filter_object.evaluate(x, y)[0][0]['score']
+            self.fast_filter = lambda x, y: self.fast_filter_object.evaluate(x, y)[
+                0][0]['score']
 
         if self.cluster == 'default':
-            MyLogger.print_and_log('Using default clustering for RetroTransformer', retro_transformer_loc)
+            MyLogger.print_and_log(
+                'Using default clustering for RetroTransformer', retro_transformer_loc)
             self.cluster = cluster_precursors
 
-        MyLogger.print_and_log('Loading retro-synthetic transformer', retro_transformer_loc)
+        MyLogger.print_and_log(
+            'Loading retro-synthetic transformer', retro_transformer_loc)
         if self.use_db:
             self.load_databases()
             try:
-                self.TEMPLATE_DB.find_one({})  # check if connection to db exists
+                # check if connection to db exists
+                self.TEMPLATE_DB.find_one({})
                 if self.load_all:
                     self.load_from_database()
-                    self.use_db = False  # it doesn't make sense to load all templates into memory and then continue to use templates from DB
+                    # it doesn't make sense to load all templates into memory and then continue to use templates from DB
+                    self.use_db = False
             except ServerSelectionTimeoutError:
-                MyLogger.print_and_log('cannot connect to db, reading from file instead', retro_transformer_loc)
+                MyLogger.print_and_log(
+                    'cannot connect to db, reading from file instead', retro_transformer_loc)
                 self.use_db = False
                 self.load_from_file(template_filename, self.template_set)
         else:
@@ -160,7 +170,8 @@ class RetroTransformer(TemplateTransformer):
                 self.templates
             ))
             if len(template) != 1:
-                raise ValueError('Duplicate templates found when trying to retrieve one unique template!')
+                raise ValueError(
+                    'Duplicate templates found when trying to retrieve one unique template!')
             template = template[0]
 
         if not self.load_all:
@@ -189,7 +200,6 @@ class RetroTransformer(TemplateTransformer):
             template_set = self.template_set
 
         index_list = indices.tolist()
-
         if self.use_db:
             templates = list(
                 self.TEMPLATE_DB.find(
@@ -209,7 +219,8 @@ class RetroTransformer(TemplateTransformer):
 
         if not self.load_all:
             # return generator of templates with rchiralReaction if rdchiralReaction initialization was successful
-            templates = (x for x in (self.doc_to_template(temp) for temp in templates) if x.get('rxn'))
+            templates = (x for x in (self.doc_to_template(temp)
+                                     for temp in templates) if x.get('rxn'))
 
         return templates
 
@@ -296,7 +307,8 @@ class RetroTransformer(TemplateTransformer):
         templates = self.order_templates_by_indices(indices, template_set)
 
         for template, score in zip(templates, scores):
-            precursors = self.apply_one_template(mol, template, record_rxn=selec_check)
+            precursors = self.apply_one_template(
+                mol, template, record_rxn=selec_check)
             for precursor in precursors:
                 precursor['template_score'] = score
                 joined_smiles = '.'.join(precursor['smiles_split'])
@@ -309,6 +321,7 @@ class RetroTransformer(TemplateTransformer):
                 if joined_smiles in smiles_to_index:
                     res = results[smiles_to_index[joined_smiles]]
                     res['tforms'] |= set([precursor['template_id']])
+                    res['template_set'] += [template_set]
                     res['num_examples'] += precursor['num_examples']
                     if score > res['template_score']:
                         if selec_check:
@@ -316,10 +329,12 @@ class RetroTransformer(TemplateTransformer):
                         res['template_score'] = score
                 else:
                     precursor['tforms'] = set([precursor['template_id']])
+                    precursor['template_set'] = [template_set]*len(precursor['tforms'])
                     smiles_to_index[joined_smiles] = len(results)
                     results.append(precursor)
         for rank, result in enumerate(results, 1):
             result['tforms'] = list(result['tforms'])
+            result['template_set'] = list(result['template_set'])
             result['rank'] = rank
         results = precursor_prioritizer(results)
         if cluster_precursors:
@@ -336,8 +351,9 @@ class RetroTransformer(TemplateTransformer):
                     continue
                 other_products = [x for x in mapped_products if x != smiles]
                 if len(other_products) > 0:
-                    precursor['outcomes'] = '.'.join([smiles] + [x for x in other_products])
-                    precursor['mapped_outcomes'] = '.'.join([mapped_products[smiles]] + \
+                    precursor['outcomes'] = '.'.join(
+                        [smiles] + [x for x in other_products])
+                    precursor['mapped_outcomes'] = '.'.join([mapped_products[smiles]] +
                                                             [mapped_products[x] for x in other_products])
                     precursor['mapped_precursors'] = mapped_precursors
 
@@ -361,7 +377,8 @@ class RetroTransformer(TemplateTransformer):
         results = []
 
         try:
-            outcomes, mapped_outcomes = rdchiralRun(template['rxn'], mol, return_mapped=True)
+            outcomes, mapped_outcomes = rdchiralRun(
+                template['rxn'], mol, return_mapped=True)
         except Exception as e:
             return results
 
@@ -383,6 +400,7 @@ class RetroTransformer(TemplateTransformer):
                 'mapped_smiles': reacting_atoms[0],
                 'reacting_atoms': reacting_atoms[1],
                 'template_id': str(template['_id']),
+                'template_set': str(template['template_set']),
                 'num_examples': template['count'],
                 'necessary_reagent': template['necessary_reagent'],
             }
@@ -409,9 +427,11 @@ class RetroTransformer(TemplateTransformer):
             forward_rxn = rdchiralReaction(str(forward_template))
             precursor_reacts = rdchiralReactants(precursors)
 
-            outcomes = rdchiralRun(forward_rxn, precursor_reacts, return_mapped=True)
+            outcomes = rdchiralRun(
+                forward_rxn, precursor_reacts, return_mapped=True)
         except Exception as e:
-            MyLogger.print_and_log('cannot create forward template from {}'.format(template), retro_transformer_loc)
+            MyLogger.print_and_log('cannot create forward template from {}'.format(
+                template), retro_transformer_loc)
             return {}, None
 
         if outcomes:
@@ -427,7 +447,7 @@ class RetroTransformer(TemplateTransformer):
     def apply_one_template_by_idx(
             self, _id, smiles, template_idx, calculate_next_probs=True,
             fast_filter_threshold=0.75, max_num_templates=100, max_cum_prob=0.995,
-            template_prioritizer=None, template_set=None, fast_filter=None, use_ban_list=True,
+            template_prioritizers=None, template_set=None, fast_filter=None, use_ban_list=True,
     ):
         """Applies one template by index.
 
@@ -456,8 +476,8 @@ class RetroTransformer(TemplateTransformer):
         Returns:
             List of outcomes wth (_id, smiles, template_idx, precursors, fast_filter_score)
         """
-        if template_prioritizer is None:
-            template_prioritizer = self.template_prioritizer
+        if template_prioritizers is None:
+            template_prioritizers = self.template_prioritizers
 
         if template_set is None:
             template_set = self.template_set
@@ -474,7 +494,7 @@ class RetroTransformer(TemplateTransformer):
         seen_reactant_combos = []
 
         if use_ban_list and smiles in BANNED_SMILES:
-            all_outcomes.append((_id, smiles, template_idx, [], 0.0))  # dummy outcome
+            all_outcomes.append((_id, smiles, template_idx, [], 0.0, template_set))  # dummy outcome
             return all_outcomes
 
         template = self.get_one_template_by_idx(template_idx, template_set)
@@ -497,20 +517,38 @@ class RetroTransformer(TemplateTransformer):
             if calculate_next_probs:
                 for reactant_smi in precursor['smiles_split']:
                     if reactant_smi not in seen_reactants:
-                        scores, indeces = template_prioritizer.predict(
-                            reactant_smi, max_num_templates=max_num_templates, max_cum_prob=max_cum_prob
-                        )
-                        # scores and indeces will be passed through celery, need to be lists
-                        scores = scores.tolist()
-                        indeces = indeces.tolist()
+                        all_scores = []
+                        all_indeces = []
+                        prioritizer_names = []
+                        for template_prioritizer in template_prioritizers:
+                            scores, indeces = template_prioritizer.predict(
+                                reactant_smi, max_num_templates=max_num_templates, max_cum_prob=max_cum_prob
+                            )
+                            # scores and indeces will be passed through celery, need to be lists
+
+                            all_scores.extend(scores.tolist())
+                            all_indeces.extend(indeces.tolist())
+                            prioritizer_names.extend(
+                                [template_prioritizer.template_set]*len(scores))
                         value = 1
-                        seen_reactants[reactant_smi] = (reactant_smi, scores, indeces, value)
+                        if len(all_scores) > 0:
+                            sorted_scores, sorted_indeces, sorted_names = zip(
+                                *sorted(zip(all_scores, all_indeces, prioritizer_names), key=lambda x: x[0], reverse=True))  # resort the different prioritizer's outputs
+                        else:
+                            sorted_scores, sorted_indeces, sorted_names = (
+                                all_scores, all_indeces, prioritizer_names)
+                        seen_reactants[reactant_smi] = (
+                            reactant_smi, sorted_scores, sorted_indeces, value, sorted_names)
+                        assert len(all_scores) == len(prioritizer_names)
                     reactants.append(seen_reactants[reactant_smi])
-                all_outcomes.append((_id, smiles, template_idx, reactants, fast_filter_score))
+                all_outcomes.append(
+                    (_id, smiles, template_idx, reactants, fast_filter_score, template_set))
             else:
-                all_outcomes.append((_id, smiles, template_idx, precursor['smiles_split'], fast_filter_score))
+                all_outcomes.append(
+                    (_id, smiles, template_idx, precursor['smiles_split'], fast_filter_score, template_set))
         if not all_outcomes:
-            all_outcomes.append((_id, smiles, template_idx, [], 0.0))  # dummy outcome
+            all_outcomes.append(
+                (_id, smiles, template_idx, [], 0.0, template_set))  # dummy outcome
 
         return all_outcomes
 
@@ -521,10 +559,10 @@ if __name__ == '__main__':
     t.load()  # chiral=True, refs=False, rxns=True)
     # def get_outcomes(
     #             self, smiles, precursor_prioritizer=None,
-    #             template_set='reaxys', template_prioritizer=None, 
-    #             fast_filter=None, fast_filter_threshold=0.75, 
-    #             max_num_templates=100, max_cum_prob=0.995, 
-    #             cluster=None, cluster_settings={}, 
+    #             template_set='reaxys', template_prioritizer=None,
+    #             fast_filter=None, fast_filter_threshold=0.75,
+    #             max_num_templates=100, max_cum_prob=0.995,
+    #             cluster=None, cluster_settings={},
     #             **kwargs
     # ):
     # Test using a chiral molecule

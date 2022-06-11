@@ -37,7 +37,8 @@ class Chemical(object):
         # Initialize lists for incoming and outgoing reactions.
         self.smiles = chem_smi
         # self.reactions = {} # TODO: deprecate, since it doesn't allow for branching
-        self.template_idx_results = {} # key is template_idx, value is a CTA
+        # key is (template_idx, template_set), value is a CTA
+        self.template_idx_results = {}
         self.purchase_price = -1
         self.as_reactant = -1
         self.as_product = -1
@@ -82,7 +83,7 @@ class Chemical(object):
         except:
             pass
 
-    def set_template_relevance_probs(self, top_probs, top_indeces, value):
+    def set_template_relevance_probs(self, top_probs, top_indeces, value, template_sets):
         """Information about how we might expand this chemical later.
 
         Args:
@@ -92,8 +93,10 @@ class Chemical(object):
         """
         self.top_probs = top_probs
         self.top_indeces = top_indeces
-        self.prob = {top_indeces[i]: top_probs[i] for i in range(len(top_probs))} # dict
-        self.sorted_id = top_indeces # copy
+        self.template_sets = template_sets
+        self.prob = {(top_indeces[i], template_sets[i]): top_probs[i]
+                     for i in range(len(top_probs))}  # dict
+        self.sorted_id = top_indeces  # copy
         self.value = value
         self.update_estimate_price(value)
 
@@ -133,6 +136,7 @@ class Chemical(object):
     #                 assert prev_CTA.plausibility == CTA.plausibility
     #                 del self.template_idx_results[template_idx]
 
+
 class ChemicalTemplateApplication(object):
     """Represents the application of a template to a chemical.
 
@@ -148,14 +152,14 @@ class ChemicalTemplateApplication(object):
     """
     # TODO: Fix the - to be a single colon
 
-    def __init__(self, smiles, template_idx):
+    def __init__(self, smiles, template_idx, template_set):
         self.smiles = smiles.strip()
         self.template_idx = template_idx
-
+        self.template_set = template_set
         self.waiting = True
         self.valid = True
 
-        self.reactions = {} # key is reactant SMILES string, value is a Reaction
+        self.reactions = {}  # key is reactant SMILES string, value is a Reaction
 
 
 class Reaction(object):
@@ -184,7 +188,7 @@ class Reaction(object):
         plausibility (float): Fast filter score.
     """
 
-    def __init__(self, smiles, template_idx):
+    def __init__(self, smiles, template_idx, template_set):
         """Initializes Reaction.
 
         Args:
@@ -193,6 +197,7 @@ class Reaction(object):
         """
         self.smiles = smiles.strip()
         self.template_idx = template_idx
+        self.template_set = template_set
         # self.depth  = depth
         self.valid = True
         self.reactant_smiles = []
@@ -211,13 +216,14 @@ class Reaction(object):
 
         self.filter_score = 1.0
 
-
         # Attributes that will need to be merged if there are two templates that can lead
         # to the same reactant SMILES - will need to check if exists
-        self.tforms = [template_idx] # will be list if multiple template_idx possible
+        # will be list if multiple template_idx possible
+        self.tforms = [template_idx]
+        self.tsources = [template_set]
         # when merging, the redundant template_idx will be considered INVALID
-        self.template_score = 0.0 # template relevance score
-        self.plausibility = 0.0 # fast filter score
+        self.template_score = 0.0  # template relevance score
+        self.plausibility = 0.0  # fast filter score
         # note: no necessary_reagent or num_examples considered yet
 
     def __repr__(self):

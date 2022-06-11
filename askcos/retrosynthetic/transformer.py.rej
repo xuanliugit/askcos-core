@@ -1,0 +1,29 @@
+diff a/askcos/retrosynthetic/transformer.py b/askcos/retrosynthetic/transformer.py	(rejected hunks)
+@@ -423,7 +443,7 @@ class RetroTransformer(TemplateTransformer):
+     def apply_one_template_by_idx(
+             self, _id, smiles, template_idx, calculate_next_probs=True,
+             fast_filter_threshold=0.75, max_num_templates=100, max_cum_prob=0.995,
+-            template_prioritizer=None, template_set=None, fast_filter=None
++            template_prioritizers=None, template_set=None, fast_filter=None
+     ):
+         """Applies one template by index.
+ 
+@@ -464,16 +484,15 @@ class RetroTransformer(TemplateTransformer):
+         mol = Chem.MolFromSmiles(smiles)
+         smiles = Chem.MolToSmiles(mol, isomericSmiles=True)
+         mol = rdchiralReactants(smiles)
+-
+         all_outcomes = []
+         seen_reactants = {}
+         seen_reactant_combos = []
+-
+         template = self.get_one_template_by_idx(template_idx, template_set)
+         try:
+             template['rxn'] = rdchiralReaction(template['reaction_smarts'])
+         except ValueError:
+-            all_outcomes.append((_id, smiles, template_idx, [], 0.0))  # dummy outcome
++            all_outcomes.append(
++                (_id, smiles, template_idx, [], 0.0, template_set))  # dummy outcome
+             return all_outcomes
+ 
+         for precursor in self.apply_one_template(mol, template):
