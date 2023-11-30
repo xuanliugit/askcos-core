@@ -12,6 +12,7 @@ from tensorflow.keras import backend as K
 import askcos.global_config as gc
 from askcos.utilities.io.logger import MyLogger
 import os
+import tensorflow as tf
 fast_filter_loc = 'fast_filter'
 
 
@@ -68,7 +69,16 @@ class FastFilterScorer(Scorer):
         pfp = np.asarray(pfp, dtype='float32')
         rfp = np.asarray(rfp, dtype='float32')
         rxnfp = pfp - rfp
-
+        print(pfp.reshape(1, 2048).shape, rxnfp.reshape(1, 2048))
+        #score = self.model.predict(
+        #    pfp.reshape(1, 2048), rxnfp.reshape(1, 2048))
+        #print(score)
+        _test_value = tf.convert_to_tensor([pfp.reshape(2048), rxnfp.reshape(2048)], dtype=tf.float32)
+        
+        print(_test_value)
+        #score = self.model.predict(
+        #    _test_value)
+        #print(score)
         score = self.model.predict(
             [pfp.reshape(1, 2048), rxnfp.reshape(1, 2048)])
         outcome = {'smiles': target,

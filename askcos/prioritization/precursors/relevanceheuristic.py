@@ -114,6 +114,7 @@ class RelevanceHeuristicPrecursorPrioritizer(Prioritizer):
 
     def load_model(self):
         """Loads the Pricer used in the heuristic priority scoring."""
+        #self.pricer = Pricer()
         self.pricer = Pricer()
         self.pricer.load()
         self._loaded = True

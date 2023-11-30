@@ -85,6 +85,8 @@ class RetroTransformer(TemplateTransformer):
             load_all=load_all, use_db=use_db)
 
     def load(self, template_filename=None):
+        if template_filename == 'bkms':
+            template_filename = gc.BIO_RETRO_TEMPLATES['file_name']
         if template_filename is None:
             template_filename = gc.RETRO_TEMPLATES['file_name']
 
@@ -109,8 +111,7 @@ class RetroTransformer(TemplateTransformer):
                 'Loading fast filter for RetroTransformer', retro_transformer_loc)
             self.fast_filter_object = FastFilterScorer()
             self.fast_filter_object.load()
-            self.fast_filter = lambda x, y: self.fast_filter_object.evaluate(x, y)[
-                0][0]['score']
+            self.fast_filter = lambda x, y: self.fast_filter_object.evaluate(x, y)[0][0]['score']
 
         if self.cluster == 'default':
             MyLogger.print_and_log(
@@ -299,7 +300,7 @@ class RetroTransformer(TemplateTransformer):
 
         if use_ban_list and smiles in BANNED_SMILES:
             return results
-
+        
         scores, indices = template_prioritizer.predict(
             smiles, max_num_templates=max_num_templates, max_cum_prob=max_cum_prob
         )
@@ -314,7 +315,8 @@ class RetroTransformer(TemplateTransformer):
                 joined_smiles = '.'.join(precursor['smiles_split'])
                 precursor['rms_molwt'] = -rms_molecular_weight(joined_smiles)
                 precursor['num_rings'] = -number_of_rings(joined_smiles)
-                precursor['plausibility'] = fast_filter(joined_smiles, smiles)
+                # precursor['plausibility'] = fast_filter(joined_smiles, smiles)
+                precursor['plausibility'] = 1
                 # skip if no transformation happened or plausibility is below threshold
                 if joined_smiles == smiles or precursor['plausibility'] < fast_filter_threshold:
                     continue

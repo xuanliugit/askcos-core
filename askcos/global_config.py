@@ -99,6 +99,12 @@ RETRO_TEMPLATES = {
     'collection': 'retro_templates'
 }
 
+BIO_RETRO_TEMPLATES = {
+    'file_name': os.path.join(data_path, 'bkms-data', 'templates', 'bkms-and-reaxys-templates.json.gz'),
+    'database': database,
+    'collection': 'retro_templates'
+}
+
 FORWARD_TEMPLATES = {
     'file_name': os.path.join(data_path, 'templates', 'forward.templates.json.gz'),
     'database': database,
@@ -144,6 +150,9 @@ RELEVANCE_TEMPLATE_PRIORITIZATION = {
     'reaxys': {
         'model_path': os.path.join(models_path, 'template_prioritization', 'reaxys', '1'),
         'output_size': 163723
+    },
+    'bkms':{
+        'model_path': os.path.join(data_path, 'bkms-data', 'models', 'bkms', '1')
     }
 }
 
